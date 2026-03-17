@@ -21,6 +21,20 @@ public class ServerState {
 
         return users.get(username).getPassword().equals(password);
     }
+    
+    //faz autenticação e regista o utilizador se for novo
+    public synchronized String login(String username, String password) {
+        if (!users.containsKey(username)) {
+            users.put(username, new User(username, password));
+            return "OK-NEW-USER";
+        }
+
+        if (users.get(username).getPassword().equals(password)) {
+            return "OK-USER";
+        }
+
+        return "WRONG-PWD";
+    }
 
     public synchronized void addCasa(Casa casa) {
         casas.put(casa.getName(), casa);

@@ -21,8 +21,23 @@ public class ClientHandler extends Thread {
 
         try {
 
-            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            //out.flush(); //envia user e password para o servidor confirmar (linha em standby cause unsure)
+            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+            
+            String user = (String) in.readObject();
+            String psswd = (String) in.readObject();
+
+            //autenticação e registo do utilizador
+            String loginResponse = state.login(user, psswd);
+            out.writeObject(loginResponse);
+            out.flush();
+
+            //se a password estiver errada, fecha a conexão
+            if (loginResponse.equals("WRONG-PWD")) {
+                socket.close();
+                return;
+            }
 
             while (true) {
 
@@ -65,6 +80,8 @@ public class ClientHandler extends Thread {
                     default:
                         out.writeObject(new Message(Command.NOK, "Unknown command"));
                 }
+
+                out.flush();
 
             }
 
