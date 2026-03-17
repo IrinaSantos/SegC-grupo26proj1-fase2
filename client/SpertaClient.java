@@ -17,6 +17,7 @@ public class SpertaClient {
             String ipAddr = host[0];
             String userID = args[1];
             String pwd = args[2];
+
             if(host.length == 1){
                 port = 22345;
             } else{
@@ -25,6 +26,7 @@ public class SpertaClient {
             
             Socket socket = new Socket(ipAddr, port);
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            //out.flush(); (linha em standby cause unsure)
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 
             out.writeObject(userID);
@@ -34,14 +36,20 @@ public class SpertaClient {
             String resposta = (String) in.readObject(); //recebe a info do servidor
 
             if(resposta.equals("WRONG-PWD")){
-                System.out.println("Password inválida!");
+                System.out.println("Password inválida.");
+                socket.close();
+                return;
 
             } else if(resposta.equals("OK-NEW-USER")){
-
                 System.out.println("Novo utilizador Registado!");
+
             } else if(resposta.equals("OK-USER")){
                 
                 System.out.println("Bem-Vindo!");
+            } else {
+                System.out.println("Resposta desconhecida do servidor.");
+                socket.close();
+                return;
             }
     
             Scanner sc = new Scanner(System.in);
@@ -53,11 +61,19 @@ public class SpertaClient {
     
                 String[] parts = line.split(" ");
     
-                Command cmd = Command.valueOf(parts[0]);
+                //caso não haja nenhum comando
+                Command cmd;
+                try {
+                    cmd = Command.valueOf(parts[0]);
+                } catch (IllegalArgumentException e) {
+                    System.out.println("Comando inválido.");
+                    continue;
+                }
     
                 Message msg = new Message(cmd, line);
     
                 out.writeObject(msg);
+                //out.flush(); (linha em standby cause unsure)
     
                 Message response = (Message) in.readObject();
     
@@ -68,6 +84,7 @@ public class SpertaClient {
     
             }
     
+            sc.close();
             socket.close();
 
         } catch (Exception e) {

@@ -26,10 +26,10 @@ public class ClientHandler extends Thread {
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
             
             String user = (String) in.readObject();
-            String psswd = (String) in.readObject();
+            String pwd = (String) in.readObject();
 
             //autenticação e registo do utilizador
-            String loginResponse = state.login(user, psswd);
+            String loginResponse = state.login(user, pwd);
             out.writeObject(loginResponse);
             out.flush();
 
