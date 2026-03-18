@@ -65,24 +65,20 @@ public class ClientHandler extends Thread {
 
                 switch (msg.getCommand()) {
 
-                    case AU:
-                        out.writeObject(new Message(Command.OK, "Authenticated"));
+                    case CREATE:
+                        out.writeObject(new Message(Command.OK, "House created"));
                         break;
 
-                    case AD:
-                        out.writeObject(new Message(Command.OK, "Device added"));
+                    case ADD:
+                        out.writeObject(new Message(Command.OK, "Permission added"));
                         break;
 
                     case RD:
-                        out.writeObject(new Message(Command.INFO, "Device created"));
+                        out.writeObject(new Message(Command.OK, "Device created"));
                         break;
 
-                    case ET:
-                        out.writeObject(new Message(Command.OK, "Temperature stored"));
-                        break;
-
-                    case EI:
-                        out.writeObject(new Message(Command.OK, "Image stored"));
+                    case EC:
+                        out.writeObject(new Message(Command.OK, "State updated"));
                         break;
 
                     case RT:
@@ -90,7 +86,7 @@ public class ClientHandler extends Thread {
                         break;
 
                     case RH:
-                        out.writeObject(new Message(Command.INFO, "Image file"));
+                        out.writeObject(new Message(Command.INFO, "History file"));
                         break;
 
                     case OUT:

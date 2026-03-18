@@ -80,6 +80,16 @@ public class SpertaClient {
                 return;
             }
     
+            //menu 
+            System.out.println("Comandos disponíveis:");
+            System.out.println("CREATE <hm>");
+            System.out.println("ADD <user1> <hm> <s>");
+            System.out.println("RD <hm> <s>");
+            System.out.println("EC <hm> <d> <int>");
+            System.out.println("RT <hm>");
+            System.out.println("RH <hm> <d>");
+            System.out.println("OUT");
+
             Scanner sc = new Scanner(System.in);
     
             while (true) {
@@ -87,9 +97,15 @@ public class SpertaClient {
                 System.out.print("> ");
                 String line = sc.nextLine();
     
+                //verifica se input está vazio 
+                if (line.trim().isEmpty()) {
+                    System.out.println("Comando inválido.");
+                    continue;
+                }
+
                 String[] parts = line.split(" ");
     
-                //caso não haja nenhum comando
+                //verifica se o input é um comando válido
                 Command cmd;
                 try {
                     cmd = Command.valueOf(parts[0]);

@@ -2,12 +2,10 @@ package common;
 
 public enum Command {
 
-    AU,
-    AD,
-    AC,
+    CREATE,
+    ADD,
     RD,
-    ET,
-    EI,
+    EC,
     RT,
     RH,
     OUT,
