@@ -7,10 +7,12 @@ import java.util.List;
 public class Casa implements Serializable {
 
     private String name;
+    private String owner;
     private List<Device> devices = new ArrayList<>();
 
-    public Casa(String name) {
+    public Casa(String name, String owner) {
         this.name = name;
+        this.owner = owner;
     }
 
     public void addDevice(Device device) {
@@ -19,6 +21,10 @@ public class Casa implements Serializable {
 
     public String getName() {
         return name;
+    }
+
+    public String getOwner() {
+        return owner;
     }
 
     public List<Device> getDevices() {
