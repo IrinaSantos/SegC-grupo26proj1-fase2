@@ -13,3 +13,5 @@ public enum Command {
     NOK,
     INFO
 }
+
+//apagar os ultimos 3 - preciso corrigir no client handler e onde eles tiverem

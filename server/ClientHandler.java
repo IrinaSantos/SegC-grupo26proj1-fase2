@@ -13,135 +13,150 @@ public class ClientHandler extends Thread {
 
     private Socket socket;
     private ServerState state;
+    private ObjectOutputStream out;
+    private ObjectInputStream in;
+    String authenticatedUser;
 
     public ClientHandler(Socket socket, ServerState state) {
         this.socket = socket;
         this.state = state;
+        this.out = new ObjectOutputStream(socket.getOutputStream());
+        this.in = new ObjectInputStream(socket.getInputStream());
+    }
+    
+    public void close() {
+        try {
+            socket.close();
+        } catch (Exception e) {
+            System.out.println("Error closing socket: " + e.getMessage());
+        }
+    }
+    
+    public void checkLogin() {
+        //dados de login
+        String user = (String) in.readObject();
+        String pwd = (String) in.readObject();
+
+        //autenticação e registo do utilizador
+        String loginResponse = state.login(user, pwd);
+        out.writeObject(loginResponse);
+        out.flush();
+
+        //se a password estiver errada, fecha a conexão
+        if (loginResponse.equals("WRONG-PWD")) {
+            socket.close();
+            return;
+        }
+    }
+    
+    public ClientRequest readRequest() {
+        try {
+            return (ClientRequest) in.readObject();
+        } catch (Exception e) {
+            System.out.println("Error reading request: " + e.getMessage());
+            return null;
+        }
+    }
+    
+    public void sendServerResponse(ServerResponse response) {
+        try {
+            out.writeObject(response);
+            out.flush();
+        } catch (Exception e) {
+            System.out.println("Error sending response: " + e.getMessage());
+        }
     }
 
     public void run() {
+        
+        //verificar attestation
+        boolean attested = verifyAttestation(appName, appSize);
 
-        try {
-
-            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-            //out.flush(); //envia user e password para o servidor confirmar (linha em standby cause unsure)
-            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-            
-            //dados da app
-            String appName = (String) in.readObject();
-            long appSize = (Long) in.readObject();
-
-            //verificar attestation
-            boolean attested = verifyAttestation(appName, appSize);
-
-            if (attested) {
-                out.writeObject("ATTESTATION OK");
-                out.flush();
-            } else {
-                out.writeObject("ATTESTATION FAILED");
-                out.flush();
-                socket.close();
-                return;
-            }
-
-            //dados de login
-            String user = (String) in.readObject();
-            String pwd = (String) in.readObject();
-
-            //autenticação e registo do utilizador
-            String loginResponse = state.login(user, pwd);
-            out.writeObject(loginResponse);
+        if (attested) {
+            out.writeObject("ATTESTATION OK");
             out.flush();
+        } else {
+            out.writeObject("ATTESTATION FAILED");
+            out.flush();
+            close();
+            return;
+        }
+        
+        checkLogin()
 
-            //se a password estiver errada, fecha a conexão
-            if (loginResponse.equals("WRONG-PWD")) {
-                socket.close();
+        while (true) {
+
+            ClientRequest request = readRequest();
+            if (request == null) {
+                close();
                 return;
             }
+            
+            ServerResponse response;
 
-            while (true) {
+            switch (request.getCommand()) {
 
-                Message msg = (Message) in.readObject();
+                case CREATE:
+            
+                    String houseName = request.getHome()
+                    boolean created = state.createCasa(houseName, user);
+                    
+                    if (created) {
+                        response = new ServerResponse(request.getCommand(), ResponseStatus.OK);
+                    } else {
+                        response = new ServerResponse(request.getCommand(), ResponseStatus.NOK);
+                    }
+                    break;
 
-                switch (msg.getCommand()) {
+                //Adicionar utilizador <user1> à casa <hm>, seção <s>
+                case ADD:
+                    
+                    String targetUser = request.getTargetUser();
+                    String houseName = request.getHome();
+                    String section = request.getSection();
 
-                     // Criar casa <hm> - utilizador é Owner
-                    case CREATE:
-                        String[] createParts = msg.getData().trim().split(" "); //secalhar trocar para split("\\s+"") para lidar com múltiplos espaços
+                    String permissionResponse = state.addPermission(user, targetUser, houseName, section);
+                    if (permissionResponse.equals("OK")) {
+                        response = new ServerResponse(request.getCommand(), ResponseStatus.OK);
+                    } else {
+                        response = new ServerResponse(request.getCommand(), ResponseStatus.NOK);
+                    }
+                    break;
 
-                        //CREATE <hm>
-                        if (createParts.length != 2) {
-                            out.writeObject(new Message(Command.NOK, "Invalid CREATE command"));
-                            break;
-                        }
+                case RD:
+                    out.writeObject(new Message(Command.OK, "Device created"));
+                    break;
 
-                        String houseName = createParts[1];
-                        boolean created = state.createCasa(houseName, user);
+                case EC:
+                    out.writeObject(new Message(Command.OK, "State updated"));
+                    break;
 
-                        if (created) {
-                            out.writeObject(new Message(Command.OK, "House created"));
-                        } else {
-                            out.writeObject(new Message(Command.NOK, "House not created"));
-                        }
-                        break;
+                case RT:
+                    out.writeObject(new Message(Command.INFO, "Temp file"));
+                    break;
 
-                    //Adicionar utilizador <user1> à casa <hm>, seção <s>
-                    case ADD:
-                        String[] addParts = msg.getData().trim().split(" "); //split("\\s+");
+                case RH:
+                    out.writeObject(new Message(Command.INFO, "History file"));
+                    break;
 
-                        //ADD <user1> <hm> <s>
-                        if (addParts.length != 4) {
-                            out.writeObject(new Message(Command.NOK, "Invalid ADD command"));
-                            break;
-                        }
+                case OUT:
+                    close();
+                    return;
 
-                        String targetUser = addParts[1];
-                        String houseName = addParts[2];
-                        String section = addParts[3];
-
-                        String permissionResponse = state.addPermission(user, targetUser, houseName, section);
-                        if (permissionResponse.equals("OK")) {
-                            out.writeObject(new Message(Command.OK, "Permission added"));
-                        } else {
-                            out.writeObject(new Message(Command.NOK, permissionResponse));
-                        }
-                        break;
-
-                    case RD:
-                        out.writeObject(new Message(Command.OK, "Device created"));
-                        break;
-
-                    case EC:
-                        out.writeObject(new Message(Command.OK, "State updated"));
-                        break;
-
-                    case RT:
-                        out.writeObject(new Message(Command.INFO, "Temp file"));
-                        break;
-
-                    case RH:
-                        out.writeObject(new Message(Command.INFO, "History file"));
-                        break;
-
-                    case OUT:
-                        socket.close();
-                        return;
-
-                    default:
-                        out.writeObject(new Message(Command.NOK, "Unknown command"));
-                }
-
-                out.flush();
-
+                default:
+                    out.writeObject(new Message(Command.NOK, "Unknown command"));
             }
 
-        } catch (Exception e) {
-            System.out.println("Client disconnected");
-        }
+            sendServerResponse(response);
 
+            }
     }
 
     private boolean verifyAttestation(String appName, long appSize) {
+       //dados da app 
+        String appName = (String) in.readObject();
+        long appSize = (Long) in.readObject();
+       
         //try que garante que o reader é fechado após a leitura do ficheiro, mesmo que ocorra um erro
         try (BufferedReader reader = new BufferedReader(new FileReader("attestation.txt"))) {
 

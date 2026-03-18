@@ -2,22 +2,16 @@ package common;
 
 import java.io.Serializable;
 
-public class Message implements Serializable {
+public abstract class Message implements Serializable {
 
-    private Command command;
-    private String data;
+    private final Command command;
 
-    public Message(Command command, String data) {
+    public Message(Command command) {
         this.command = command;
-        this.data = data;
     }
 
     public Command getCommand() {
         return command;
-    }
-
-    public String getData() {
-        return data;
     }
 
 }
