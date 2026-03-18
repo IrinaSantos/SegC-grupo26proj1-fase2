@@ -5,10 +5,16 @@ import common.Message;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.File;
 import java.net.Socket;
 import java.util.Scanner;
 
 public class SpertaClient {
+
+    private static long getClientAppSize() {
+        File classFile = new File("client/SpertaClient.class");
+        return classFile.length();
+    }
 
     public static void main(String[] args) throws Exception {
         try {
@@ -26,24 +32,46 @@ public class SpertaClient {
             
             Socket socket = new Socket(ipAddr, port);
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-            //out.flush(); (linha em standby cause unsure)
+            //out.flush(); (linha em standby cause unsure (--))
             ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+
+            //enviar dados da app para atestação
+            String appName = "SpertaClient";
+            long appSize = getClientAppSize();
+            out.writeObject(appName);
+            out.writeObject(appSize);
+            out.flush();
+
+            //ler e confirmar resposta da atestação
+            String attestationResponse = (String) in.readObject();
+
+            if (attestationResponse.equals("ATTESTATION FAILED")) {
+                System.out.println("ATTESTATION FAILED");
+                socket.close();
+                return;
+            } else if (attestationResponse.equals("ATTESTATION OK")) {
+                System.out.println("ATTESTATION OK");
+            } else {
+                System.out.println("Resposta inválida do servidor.");
+                socket.close();
+                return;
+            }
 
             out.writeObject(userID);
             out.writeObject(pwd);
             out.flush(); //envia user e password para o servidor confirmar
 
-            String resposta = (String) in.readObject(); //recebe a info do servidor
+            String loginResponse = (String) in.readObject(); //recebe a info do servidor
 
-            if(resposta.equals("WRONG-PWD")){
+            if(loginResponse.equals("WRONG-PWD")){
                 System.out.println("Password inválida.");
                 socket.close();
                 return;
 
-            } else if(resposta.equals("OK-NEW-USER")){
+            } else if(loginResponse.equals("OK-NEW-USER")){
                 System.out.println("Novo utilizador Registado!");
 
-            } else if(resposta.equals("OK-USER")){
+            } else if(loginResponse.equals("OK-USER")){
                 
                 System.out.println("Bem-Vindo!");
             } else {
@@ -73,7 +101,7 @@ public class SpertaClient {
                 Message msg = new Message(cmd, line);
     
                 out.writeObject(msg);
-                //out.flush(); (linha em standby cause unsure)
+                out.flush();
     
                 Message response = (Message) in.readObject();
     
