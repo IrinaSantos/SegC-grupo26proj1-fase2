@@ -36,6 +36,15 @@ public class ServerState {
         return "WRONG-PWD";
     }
 
+        public synchronized boolean createCasa(String houseName, String owner) {
+        if (casas.containsKey(houseName)) {
+            return false;
+        }
+
+        addCasa(new Casa(houseName, owner));
+        return true;
+    }
+
     public synchronized void addCasa(Casa casa) {
         casas.put(casa.getName(), casa);
     }

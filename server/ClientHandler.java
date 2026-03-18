@@ -66,7 +66,21 @@ public class ClientHandler extends Thread {
                 switch (msg.getCommand()) {
 
                     case CREATE:
-                        out.writeObject(new Message(Command.OK, "House created"));
+                        String[] createParts = msg.getData().trim().split(" "); //secalhar trocar para split("\\s+"") para lidar com múltiplos espaços
+
+                        if (createParts.length != 2) {
+                            out.writeObject(new Message(Command.NOK, "Invalid CREATE command"));
+                            break;
+                        }
+
+                        String houseName = createParts[1];
+                        boolean created = state.createCasa(houseName, user);
+
+                        if (created) {
+                            out.writeObject(new Message(Command.OK, "House created"));
+                        } else {
+                            out.writeObject(new Message(Command.NOK, "House not created"));
+                        }
                         break;
 
                     case ADD:
