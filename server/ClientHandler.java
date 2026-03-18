@@ -65,9 +65,11 @@ public class ClientHandler extends Thread {
 
                 switch (msg.getCommand()) {
 
+                     // Criar casa <hm> - utilizador é Owner
                     case CREATE:
                         String[] createParts = msg.getData().trim().split(" "); //secalhar trocar para split("\\s+"") para lidar com múltiplos espaços
 
+                        //CREATE <hm>
                         if (createParts.length != 2) {
                             out.writeObject(new Message(Command.NOK, "Invalid CREATE command"));
                             break;
@@ -83,8 +85,26 @@ public class ClientHandler extends Thread {
                         }
                         break;
 
+                    //Adicionar utilizador <user1> à casa <hm>, seção <s>
                     case ADD:
-                        out.writeObject(new Message(Command.OK, "Permission added"));
+                        String[] addParts = msg.getData().trim().split(" "); //split("\\s+");
+
+                        //ADD <user1> <hm> <s>
+                        if (addParts.length != 4) {
+                            out.writeObject(new Message(Command.NOK, "Invalid ADD command"));
+                            break;
+                        }
+
+                        String targetUser = addParts[1];
+                        String houseName = addParts[2];
+                        String section = addParts[3];
+
+                        String permissionResponse = state.addPermission(user, targetUser, houseName, section);
+                        if (permissionResponse.equals("OK")) {
+                            out.writeObject(new Message(Command.OK, "Permission added"));
+                        } else {
+                            out.writeObject(new Message(Command.NOK, permissionResponse));
+                        }
                         break;
 
                     case RD:

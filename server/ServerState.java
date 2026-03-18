@@ -24,7 +24,7 @@ public class ServerState {
     
     //faz autenticação e regista o utilizador se for novo
     public synchronized String login(String username, String password) {
-        if (!users.containsKey(username)) {
+        if (!userExists(username)) {
             users.put(username, new User(username, password));
             return "OK-NEW-USER";
         }
@@ -36,7 +36,11 @@ public class ServerState {
         return "WRONG-PWD";
     }
 
-        public synchronized boolean createCasa(String houseName, String owner) {
+    public synchronized boolean userExists(String username) {
+        return users.containsKey(username);
+    }
+
+    public synchronized boolean createCasa(String houseName, String owner) {
         if (casas.containsKey(houseName)) {
             return false;
         }
@@ -45,8 +49,30 @@ public class ServerState {
         return true;
     }
 
+    public synchronized Casa getCasa(String houseName) {
+        return casas.get(houseName);
+    } 
+
     public synchronized void addCasa(Casa casa) {
         casas.put(casa.getName(), casa);
     }
 
+    public synchronized String addPermission(String requester, String targetUser, String houseName, String section) {
+        if (!casas.containsKey(houseName)) {
+            return "NOHM";
+        }
+
+        if (!users.containsKey(targetUser)) {
+            return "NOUSER";
+        }
+
+        Casa casa = casas.get(houseName);
+
+        if (!casa.getOwner().equals(requester)) {
+            return "NOPERM";
+        }
+
+        casa.addPermission(targetUser, section);
+        return "OK";
+    }
 }
