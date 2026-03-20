@@ -1,3 +1,5 @@
+package common;
+
 public class ServerResponse extends Message {
 
     private ResponseStatus status;

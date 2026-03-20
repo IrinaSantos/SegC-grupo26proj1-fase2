@@ -17,11 +17,15 @@ public class ClientHandler extends Thread {
     private ObjectInputStream in;
     String authenticatedUser;
 
+    // Controllers
+    private UserController userController;
+
     public ClientHandler(Socket socket, ServerState state) {
         this.socket = socket;
         this.state = state;
         this.out = new ObjectOutputStream(socket.getOutputStream());
         this.in = new ObjectInputStream(socket.getInputStream());
+        this.userController = new UserController();
     }
     
     public void close() {
@@ -32,21 +36,53 @@ public class ClientHandler extends Thread {
         }
     }
     
-    public void checkLogin() {
-        //dados de login
-        String user = (String) in.readObject();
-        String pwd = (String) in.readObject();
+    public void authenticateUser() {
+        String currentUser = null; 
+        boolean isAuthenticated = false;
+        while (!isAuthenticated) { 
+            ServerResponse loginResponse;
+            try {
+                 ClientRequest loginRequest = (ClientRequest) readRequest();
+            
+                if (loginRequest == null || loginRequest.getCommand() != Command.LOGIN) {
+                    loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.INVALID_REQUEST);
+                    continue;
+                }
+                
+                String user = loginRequest.getUsername(); 
+                String pwd = loginRequest.getPassword();
 
-        //autenticação e registo do utilizador
-        String loginResponse = state.login(user, pwd);
-        out.writeObject(loginResponse);
-        out.flush();
+                if (user == null || pwd == null) {
+                    loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.INVALID_REQUEST);
+                    continue;
+                }
 
-        //se a password estiver errada, fecha a conexão
-        if (loginResponse.equals("WRONG-PWD")) {
-            socket.close();
-            return;
+                if (userController.userExists(user)) {
+                    boolean authenticated = userController.authenticate(user, pwd);
+                    if (authenticated) {
+                        loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.OK_USER);
+                        currentUser = user;
+                        isAuthenticated = true;
+                    } else {
+                        loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.WRONG_PWD);
+                    }
+                } else {
+                    boolean registered = userController.register(user, pwd);
+                    if (registered) {
+                        loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.OK_NEW_USER);
+                        currentUser = user;
+                        isAuthenticated = true;
+                    } else {
+                        loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.ERROR);
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("Error during authentication: " + e.getMessage());
+                loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.ERROR);
+            }
+            sendServerResponse(loginResponse);
         }
+        authenticatedUser = currentUser;
     }
     
     public ClientRequest readRequest() {
@@ -82,7 +118,7 @@ public class ClientHandler extends Thread {
             return;
         }
         
-        checkLogin()
+        authenticateUser();
 
         while (true) {
 
@@ -96,6 +132,7 @@ public class ClientHandler extends Thread {
 
             switch (request.getCommand()) {
 
+                //Criar casa <hm> - utilizador é Owner 
                 case CREATE:
             
                     String houseName = request.getHome()
@@ -123,22 +160,29 @@ public class ClientHandler extends Thread {
                     }
                     break;
 
+                //Registar um Dispositivo na casa <hm>, na seção <s>
                 case RD:
                     out.writeObject(new Message(Command.OK, "Device created"));
                     break;
 
+                //Enviar valor <int> de estado/temporização, do dispositivo <d> da casa <hm>, para o servidor
                 case EC:
                     out.writeObject(new Message(Command.OK, "State updated"));
                     break;
 
+                //Receber a informação sobre o último comando  (estados/temporizações) enviado a cada dispositivo da 
+                // casa <hm>, desde que o utilizador tenha permissões
                 case RT:
                     out.writeObject(new Message(Command.INFO, "Temp file"));
                     break;
 
+                //Receber o Histórico (ficheiro de log .csv) de comandos enviados ao dispositivo <d> da casa <hm>, 
+                // desde que o utilizador tenha permissões
                 case RH:
                     out.writeObject(new Message(Command.INFO, "History file"));
                     break;
 
+                //CTRL+C
                 case OUT:
                     close();
                     return;

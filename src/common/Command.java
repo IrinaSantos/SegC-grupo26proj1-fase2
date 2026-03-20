@@ -9,9 +9,8 @@ public enum Command {
     RT,
     RH,
     OUT,
-    OK,
-    NOK,
-    INFO
+    INFO,
+    LOGIN
 }
 
 //apagar os ultimos 3 - preciso corrigir no client handler e onde eles tiverem

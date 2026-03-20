@@ -50,7 +50,7 @@ public class SpertaClient {
         }
     }
     
-    public LoginResponse login(String userID, String password) throws Exception {
+    public ServerResponse login(String userID, String password) throws Exception {
         out.writeObject(userID);
         out.writeObject(password);
         out.flush();
@@ -97,7 +97,7 @@ public class SpertaClient {
     public void handleResponse(ServerResponse response) {
         switch (response.getCommand()) {
             case "CREATE":
-                if rsponse.getStatus().equals("OK")) {
+                if (response.getStatus().equals("OK")) {
                     System.out.println("Home criado com sucesso.");
                 } else {
                     System.out.println("Erro ao criar home: " + response.getStatus());
@@ -116,19 +116,37 @@ public class SpertaClient {
         SpertaClient client = new SpertaClient(ipAddr, port);
         client.establishAtestation();
 
-        String userID = args[1];
+        String userID = args[1]; 
         String pwd = args[2];
         
-        LoginResponse loginResult = client.login(userID, pwd);
-        if (loginResult == LoginResponse.WRONG_PWD) {
-            System.out.println("Senha incorreta. Encerrando cliente.");
-            client.close();
-            return;
-        } else if (loginResult == LoginResponse.OK_NEW_USER) {
-            System.out.println("Novo usuário criado: " + userID);
-        } else if (loginResult == LoginResponse.OK_USER) {
-            System.out.println("Bem-vindo de volta, " + userID);
+        while (true) {
+            ServerResponse loginResponse = client.login(userID, pwd);
+            if (loginResponse == LoginResponse.WRONG_PWD) {
+                System.out.println("Password incorreta. Por favor, tente novamente.");
+                try (Scanner sc = new Scanner(System.in)) {
+                    System.out.print("Username: ");
+                    userID = sc.nextLine();
+                    System.out.print("Password: ");
+                    pwd = sc.nextLine();
+                } catch (Exception e) {
+                    System.out.println("Erro ao ler input: " + e.getMessage());
+                    client.close();
+                    return;
+                }
+            } else if (loginResponse == LoginResponse.OK_NEW_USER) {
+                System.out.println("Novo utilizador registado e autenticado com sucesso.");
+                break;
+            } else if (loginResponse == LoginResponse.OK_USER) {
+                System.out.println("Utilizador autenticado com sucesso.");
+                break;
+            } else {
+                System.out.println("Resposta desconhecida do servidor. Encerrando cliente.");
+                client.close();
+                return;
+            }
         }
+
+        client.login(userID, pwd);
         
         printCommands();
         try (Scanner sc = new Scanner(System.in)) { 
