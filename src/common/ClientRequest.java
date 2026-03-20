@@ -6,11 +6,15 @@ public class ClientRequest extends Message{
     private String username;
     private String password;
 
+    // Attestation Attributes
+    private String appName;
+    private long appSize;
+
+    // General Request Attributes
     private String home;
     private String userIdToAdd; 
-    private String userIdToRemove;  //??
+    private String userIdToRemove;
     private String section;
-    // faltam mais
 
     public ClientRequest(Command command) {
         super(command);

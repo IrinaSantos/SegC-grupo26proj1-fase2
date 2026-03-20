@@ -2,6 +2,8 @@ package common;
 
 public enum Command {
 
+    LOGIN,
+    ATTESTATION,
     CREATE,
     ADD,
     RD,
@@ -9,8 +11,5 @@ public enum Command {
     RT,
     RH,
     OUT,
-    INFO,
-    LOGIN
+    INFO
 }
-
-//apagar os ultimos 3 - preciso corrigir no client handler e onde eles tiverem

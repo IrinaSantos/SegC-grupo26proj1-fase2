@@ -19,6 +19,7 @@ public class ClientHandler extends Thread {
 
     // Controllers
     private UserController userController;
+    private AttestationControllet attestationController;
 
     public ClientHandler(Socket socket, ServerState state) {
         this.socket = socket;
@@ -26,6 +27,7 @@ public class ClientHandler extends Thread {
         this.out = new ObjectOutputStream(socket.getOutputStream());
         this.in = new ObjectInputStream(socket.getInputStream());
         this.userController = new UserController();
+        this.attestationController = new AttestationControllet();
     }
     
     public void close() {
@@ -35,9 +37,34 @@ public class ClientHandler extends Thread {
             System.out.println("Error closing socket: " + e.getMessage());
         }
     }
+
+    public void verifyAttestation(String appName, long appSize) {
+        ClientRequest attestationRequest = (ClientRequest) readRequest();
+        ServerResponse attestationResponse;
+
+        if (attestationRequest == null || attestationRequest.getCommand() != Command.ATTESTATION) {
+            attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.INVALID_REQUEST);
+            sendServerResponse(attestationResponse);
+            close(); return;
+        } 
+
+        if (attestationController.isAttestationRegistered(appName)) {
+            if (!attestationController.verifyAttestation(appName, appSize)) {
+                attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.ATTESTATION_FAILED);
+                sendServerResponse(attestationResponse);
+                close(); return;
+            } else attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.ATTESTATION_OK);
+        } else {
+            if (!attestationController.registerAttestation(appName, appSize)) {
+                attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.ATTESTATION_SERVER_ERROR);
+                sendServerResponse(attestationResponse);
+                close(); return;
+            } else attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.ATTESTATION_OK);
+        }
+        sendServerResponse(attestationResponse); 
+    }
     
     public void authenticateUser() {
-        String currentUser = null; 
         boolean isAuthenticated = false;
         while (!isAuthenticated) { 
             ServerResponse loginResponse;
@@ -61,7 +88,7 @@ public class ClientHandler extends Thread {
                     boolean authenticated = userController.authenticate(user, pwd);
                     if (authenticated) {
                         loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.OK_USER);
-                        currentUser = user;
+                        authenticatedUser = user;
                         isAuthenticated = true;
                     } else {
                         loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.WRONG_PWD);
@@ -70,7 +97,7 @@ public class ClientHandler extends Thread {
                     boolean registered = userController.register(user, pwd);
                     if (registered) {
                         loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.OK_NEW_USER);
-                        currentUser = user;
+                        authenticatedUser = user;
                         isAuthenticated = true;
                     } else {
                         loginResponse = new ServerResponse(Command.LOGIN, ResponseStatus.ERROR);
@@ -82,7 +109,6 @@ public class ClientHandler extends Thread {
             }
             sendServerResponse(loginResponse);
         }
-        authenticatedUser = currentUser;
     }
     
     public ClientRequest readRequest() {
@@ -105,128 +131,82 @@ public class ClientHandler extends Thread {
 
     public void run() {
         
-        //verificar attestation
-        boolean attested = verifyAttestation(appName, appSize);
-
-        if (attested) {
-            out.writeObject("ATTESTATION OK");
-            out.flush();
-        } else {
-            out.writeObject("ATTESTATION FAILED");
-            out.flush();
-            close();
-            return;
-        }
-        
+        verifyAttestation(appName, appSize);
         authenticateUser();
 
         while (true) {
 
             ClientRequest request = readRequest();
             if (request == null) {
-                close();
-                return;
+                close(); return;
             }
             
-            ServerResponse response;
-
-            switch (request.getCommand()) {
-
-                //Criar casa <hm> - utilizador é Owner 
-                case CREATE:
-            
-                    String houseName = request.getHome()
-                    boolean created = state.createCasa(houseName, user);
-                    
-                    if (created) {
-                        response = new ServerResponse(request.getCommand(), ResponseStatus.OK);
-                    } else {
-                        response = new ServerResponse(request.getCommand(), ResponseStatus.NOK);
-                    }
-                    break;
-
-                //Adicionar utilizador <user1> à casa <hm>, seção <s>
-                case ADD:
-                    
-                    String targetUser = request.getTargetUser();
-                    String houseName = request.getHome();
-                    String section = request.getSection();
-
-                    String permissionResponse = state.addPermission(user, targetUser, houseName, section);
-                    if (permissionResponse.equals("OK")) {
-                        response = new ServerResponse(request.getCommand(), ResponseStatus.OK);
-                    } else {
-                        response = new ServerResponse(request.getCommand(), ResponseStatus.NOK);
-                    }
-                    break;
-
-                //Registar um Dispositivo na casa <hm>, na seção <s>
-                case RD:
-                    out.writeObject(new Message(Command.OK, "Device created"));
-                    break;
-
-                //Enviar valor <int> de estado/temporização, do dispositivo <d> da casa <hm>, para o servidor
-                case EC:
-                    out.writeObject(new Message(Command.OK, "State updated"));
-                    break;
-
-                //Receber a informação sobre o último comando  (estados/temporizações) enviado a cada dispositivo da 
-                // casa <hm>, desde que o utilizador tenha permissões
-                case RT:
-                    out.writeObject(new Message(Command.INFO, "Temp file"));
-                    break;
-
-                //Receber o Histórico (ficheiro de log .csv) de comandos enviados ao dispositivo <d> da casa <hm>, 
-                // desde que o utilizador tenha permissões
-                case RH:
-                    out.writeObject(new Message(Command.INFO, "History file"));
-                    break;
-
-                //CTRL+C
-                case OUT:
-                    close();
-                    return;
-
-                default:
-                    out.writeObject(new Message(Command.NOK, "Unknown command"));
+            ServerResponse response = processClientRequest(request);
+            if (response == null) {
+                close(); return;
             }
-
-            sendServerResponse(response);
-
-            }
-    }
-
-    private boolean verifyAttestation(String appName, long appSize) {
-       //dados da app 
-        String appName = (String) in.readObject();
-        long appSize = (Long) in.readObject();
-       
-        //try que garante que o reader é fechado após a leitura do ficheiro, mesmo que ocorra um erro
-        try (BufferedReader reader = new BufferedReader(new FileReader("attestation.txt"))) {
-
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(":");
-
-                //verifica se a linha tem o formato correto (nome:tamanho) e ignora se não tiver
-                if (parts.length != 2) {
-                    continue;
-                }
-
-                String storedAppName = parts[0].trim();
-                long storedAppSize = Long.parseLong(parts[1].trim());
-
-                //verifica se existe uma entrada com esse nome e tamanho armazenada
-                if (storedAppName.equals(appName) && storedAppSize == appSize) {
-                    return true;
-                }
-            }
-
-        } catch (Exception e) {
-            System.out.println("Erro ao ler attestation.txt");
         }
-
-        return false;
     }
+
+    public ServerResponse processClientRequest(ClientRequest request) {
+        ServerResponse response;
+        switch (request.getCommand()) {
+            //Criar casa <hm> - utilizador é Owner 
+            case CREATE:
+        
+                String houseName = request.getHome()
+                boolean created = state.createCasa(houseName, user);
+                
+                if (created) {
+                    response = new ServerResponse(request.getCommand(), ResponseStatus.OK);
+                } else {
+                    response = new ServerResponse(request.getCommand(), ResponseStatus.NOK);
+                }
+                break;
+
+            //Adicionar utilizador <user1> à casa <hm>, seção <s>
+            case ADD:
+                
+                String targetUser = request.getTargetUser();
+                String houseName = request.getHome();
+                String section = request.getSection();
+
+                String permissionResponse = state.addPermission(user, targetUser, houseName, section);
+                if (permissionResponse.equals("OK")) {
+                    response = new ServerResponse(request.getCommand(), ResponseStatus.OK);
+                } else {
+                    response = new ServerResponse(request.getCommand(), ResponseStatus.NOK);
+                }
+                break;
+
+            //Registar um Dispositivo na casa <hm>, na seção <s>
+            case RD:
+                break;
+
+            //Enviar valor <int> de estado/temporização, do dispositivo <d> da casa <hm>, para o servidor
+            case EC:
+                break;
+
+            //Receber a informação sobre o último comando  (estados/temporizações) enviado a cada dispositivo da 
+            // casa <hm>, desde que o utilizador tenha permissões
+            case RT:
+                break;
+
+            //Receber o Histórico (ficheiro de log .csv) de comandos enviados ao dispositivo <d> da casa <hm>, 
+            // desde que o utilizador tenha permissões
+            case RH:
+                break;
+
+            //CTRL+C
+            case OUT:
+                response = null;
+                break;
+
+            default:
+                response = new ServerResponse(request.getCommand(), ResponseStatus.INVALID_REQUEST);
+                break;
+        }
+        return response;
+    }
+       
 }

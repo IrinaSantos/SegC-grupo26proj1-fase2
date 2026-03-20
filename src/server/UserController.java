@@ -15,7 +15,6 @@ import java.util.Scanner;
 public class UserController {
 
     private static final String USERS_FILE = "data/users.txt";
-    private String currentUser; // User Authenticated
     private File fileUS;
 
     public UserController() {
@@ -34,7 +33,6 @@ public class UserController {
             while (scanner.hasNextLine()) {
                 String[] parts = scanner.nextLine().split(":");
                 if (parts.length == 2 && parts[0].equals(username) && parts[1].equals(password)) {
-                    currentUser = username;
                     return true;
                 }
             }
@@ -44,7 +42,7 @@ public class UserController {
         return false;
     }
 
-    public boolean register(String username, String password) {
+    public boolean registerUser(String username, String password) {
         if (username.isEmpty() || password.isEmpty()) {
             return false;
         }
@@ -57,11 +55,7 @@ public class UserController {
         }
     }
 
-    public String getCurrentUser() {
-        return currentUser;
-    }
-
-    public boolean exists(String username) {
+    public boolean isUserRegistered(String username) {
         try (Scanner scanner = new Scanner(fileUS)) {
             while (scanner.hasNextLine()) {
                 String[] parts = scanner.nextLine().split(":");
