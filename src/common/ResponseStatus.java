@@ -1,9 +1,14 @@
+package common;
+
 public enum ResponseStatus {
     OK,
     NOK,
     UNAUTHORIZED,
     NOT_FOUND,
     ERROR,
+    NOHM,
+    NOUSER,
+    NOPERM,
     INVALID_REQUEST,
     ATTESTATION_OK,
     ATTESTATION_FAILED,
