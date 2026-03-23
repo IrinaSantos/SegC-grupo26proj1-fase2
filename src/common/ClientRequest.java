@@ -57,7 +57,7 @@ public class ClientRequest extends Message{
         this.home = home;
     }
 
-    public String userIdToAdd() {
+    public String getUserIdToAdd() {
         return userIdToAdd;
     }
     public void setUserIdToAdd(String userIdToAdd) {
