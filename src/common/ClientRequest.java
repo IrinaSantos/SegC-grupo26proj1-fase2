@@ -13,8 +13,10 @@ public class ClientRequest extends Message{
     // General Request Attributes
     private String home;
     private String userIdToAdd; 
-    private String userIdToRemove;
+   // private String userIdToRemove;
     private String section;
+    private String deviceId;
+    private int intValue;
 
     public ClientRequest(Command command) {
         super(command);
@@ -23,7 +25,6 @@ public class ClientRequest extends Message{
     public String getUsername() {
         return username;
     }
-
     public void setUsername(String username) {
         this.username = username;
     }
@@ -31,15 +32,26 @@ public class ClientRequest extends Message{
     public String getPassword() {
         return password;
     }
-
     public void setPassword(String password) {
         this.password = password;
     }
 
+    public String getAppName() {
+        return appName;
+    }
+    public void setAppName(String appName) {
+        this.appName = appName;
+    }
+    
+    public long getAppSize() {
+        return appSize;
+    }
+    public void setAppSize(long appSize) {
+        this.appSize = appSize;
+    }
     public String getHome() {
         return home;
     }
-
     public void setHome(String home) {
         this.home = home;
     }
@@ -47,7 +59,6 @@ public class ClientRequest extends Message{
     public String getUserIdToAdd() {
         return userIdToAdd;
     }
-
     public void setUserIdToAdd(String userIdToAdd) {
         this.userIdToAdd = userIdToAdd;
     }
@@ -55,9 +66,22 @@ public class ClientRequest extends Message{
     public String getSection() {
         return section;
     }
-    
     public void setSection(String section) {
         this.section = section;
      }
-    // etc
+    
+    public String getDeviceId() {
+        return deviceId;
+    }
+    public void setDeviceId(String deviceId) {
+        this.deviceId = deviceId;
+    }
+
+    public int getIntValue() {
+        return intValue;
+    }
+    public void setIntValue(int intValue) {
+        this.intValue = intValue;
+    }
+
 }

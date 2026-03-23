@@ -1,6 +1,10 @@
+package server;
+import java.io.*;
+import java.util.Scanner;
+
 public class AttestationController {
 
-    private static final String ATTESTATION_FILE = "data/attestations.txt";
+    private static final String ATTESTATION_FILE = "data/attestation.txt";
 
     public AttestationController() {
         File file = new File(ATTESTATION_FILE);
