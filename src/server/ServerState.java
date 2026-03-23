@@ -74,6 +74,7 @@ public class ServerState {
     }
     
     public synchronized String addPermission(String requester, String targetUser, String houseName, String section) {
+        loadUsers();
         if (!casas.containsKey(houseName)) {
             return "NOHM";
         }
@@ -171,11 +172,19 @@ public class ServerState {
     private void loadUsers(){
         File file = new File(USERS_FILE);
         if (!file.exists()) return;
+
         try (BufferedReader br = new BufferedReader(new FileReader(file))){
             String line;
             while ((line = br.readLine()) != null) {
-                String[] parts = line.split(";");
+                line=line.trim();
+                if(line.isEmpty()) continue;
+
+                String[] parts = line.split(":");
+                if(parts.length >=2){
                 users.put(parts[0], new User(parts[0], parts[1]));
+                }else{
+                    System.out.println("Lina ignorada em users.txt, formato inválido: " + line);
+                }
             }
         } catch (IOException e) {
             System.out.println("Error loading users: " + e.getMessage());
@@ -194,17 +203,19 @@ public class ServerState {
         }
 
         String deviceId = casa.incrementSectionCounter(section);
-        if (deviceId == null) {
-            return "NOK";
-        }
+        
         try{
             File logFile = new File("data/" + houseName + "_" + deviceId + "_log.csv");
+            if(!logFile.exists()){
             logFile.createNewFile();
+            }
         }catch (IOException e){
             System.out.println("Error creating log file: " + e.getMessage());
+            return "ERROR";
         }
         saveHouses();
-        return deviceId;
+        System.out.println("Device " + deviceId + " registered in house " + houseName);
+        return "OK";
     }
 
     private synchronized void saveHouses(){

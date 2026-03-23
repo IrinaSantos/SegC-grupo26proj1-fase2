@@ -72,12 +72,11 @@ public class Casa implements Serializable {
     }    
 
     public synchronized String incrementSectionCounter(String section) {
-        if (!sectionCounters.containsKey(section)) {
-            return null;
-        }
-        int currentCounter = sectionCounters.get(section);
-        String deviceId = section + currentCounter;
-        sectionCounters.put(section, currentCounter + 1);
+        section = section.toUpperCase();
+        int currentCounter = sectionCounters.getOrDefault(section, 0);
+        int nextCounter = currentCounter + 1;
+        String deviceId = section + nextCounter;
+        sectionCounters.put(section, nextCounter);
         return deviceId;
     }
 
