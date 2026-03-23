@@ -47,6 +47,29 @@ public class SpertaClient {
             System.exit(0);
         }
     }
+
+    /* commit irina 
+        public boolean establishAttestation() throws Exception {
+        ClientRequest request = new ClientRequest(Command.ATTESTATION);
+        request.setAppName("SpertaClient");
+        request.setAppSize(getClientAppSize());
+
+        sendRequest(request);
+        ServerResponse response = getResponse();
+
+        if (response.getStatus() == ResponseStatus.ATTESTATION_OK) {
+            System.out.println("ATTESTATION OK");
+            return true;
+        }
+
+        if (response.getStatus() == ResponseStatus.ATTESTATION_FAILED) {
+            System.out.println("ATTESTATION FAILED");
+            return false;
+        }
+
+        System.out.println("Resposta inválida de atestação: " + response.getStatus());
+        return false;
+    }*/
     
     public ServerResponse login(String userID, String password) throws Exception {
         ClientRequest loginReq = new ClientRequest(Command.LOGIN);
@@ -60,7 +83,7 @@ public class SpertaClient {
 
         ServerResponse response = (ServerResponse) in.readObject();
         return response;
-/*
+        /*
         if (loginResponse.equals("WRONG-PWD")) {
             return LoginResponse.WRONG_PWD;
         } else if (loginResponse.equals("OK-NEW-USER")) {
@@ -72,6 +95,17 @@ public class SpertaClient {
         }*/
     }
     
+    /*Commit irina 
+    public ResponseStatus login(String userID, String password) throws Exception {
+        ClientRequest request = new ClientRequest(Command.LOGIN);
+        request.setUsername(userID);
+        request.setPassword(password);
+
+        sendRequest(request);
+        ServerResponse response = getResponse();
+        return response.getStatus();
+    }
+    */
    /* public static void printCommands() {
         System.out.println("Comandos disponíveis:");
         System.out.println("CREATE <hm>");
@@ -83,12 +117,18 @@ public class SpertaClient {
         System.out.println("OUT");
     }*/
     
-    public void close() throws Exception {
-        in.close();
-        out.close();
-        socket.close();
+    public void close() {
+        try {
+            in.close();
+        } catch (Exception ignored) { }
+        try {
+            out.close();
+        } catch (Exception ignored) { }
+        try {
+            socket.close();
+        } catch (Exception ignored) { }
     }
-    
+
     public void sendRequest(ClientRequest request) throws Exception {
         out.writeObject(request);
         out.flush();
@@ -126,7 +166,120 @@ public class SpertaClient {
             default:
                 System.out.println("Resposta desconhecida do servidor.");
         }
+        /*commit irina 
+                if (response == null) {
+            System.out.println("Sem resposta do servidor.");
+            return;
+        }
+
+        Command cmd = response.getCommand();
+        ResponseStatus status = response.getStatus();
+
+        switch (cmd) {
+            case CREATE:
+                if (status == ResponseStatus.OK) {
+                    System.out.println("Casa criada com sucesso.");
+                } else {
+                    System.out.println("Erro ao criar casa: " + status);
+                }
+                break;
+
+            case ADD:
+                if (status == ResponseStatus.OK) {
+                    System.out.println("Permissão adicionada com sucesso.");
+                } else {
+                    System.out.println("Erro no ADD: " + status);
+                }
+                break;
+
+            case RD:
+                System.out.println("Resposta RD: " + status);
+                break;
+
+            case EC:
+                System.out.println("Resposta EC: " + status);
+                break;
+
+            case RT:
+                System.out.println("Resposta RT: " + status);
+                break;
+
+            case RH:
+                System.out.println("Resposta RH: " + status);
+                break;
+
+            default:
+                System.out.println("Resposta: " + status);
+        }
     }
+
+    public ClientRequest buildRequestFromInput(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return null;
+        }
+
+        String[] parts = input.trim().split("\\s+");
+        String commandText = parts[0].toUpperCase();
+
+        Command command;
+        try {
+            command = Command.valueOf(commandText);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+
+        ClientRequest request;
+
+        //só o create e add é que tão 100% implementados, os outros tão mais para teste do servidor
+        switch (command) {
+            case CREATE:
+                if (parts.length != 2) return null;
+                request = new ClientRequest(Command.CREATE);
+                request.setHome(parts[1]);
+                return request;
+            case ADD:
+                if (parts.length != 4) return null;
+                request = new ClientRequest(Command.ADD);
+                request.setTargetUser(parts[1]);
+                request.setHome(parts[2]);
+                request.setSection(parts[3]);
+                return request;
+            case RD:
+                if (parts.length != 3) return null;
+                request = new ClientRequest(Command.RD);
+                request.setHome(parts[1]);
+                request.setSection(parts[2]);
+                return request;
+            case EC:
+                if (parts.length != 4) return null;
+                request = new ClientRequest(Command.EC);
+                request.setHome(parts[1]);
+                request.setDevice(parts[2]);
+                try {
+                    request.setValue(Integer.parseInt(parts[3]));
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+                return request;
+            case RT:
+                if (parts.length != 2) return null;
+                request = new ClientRequest(Command.RT);
+                request.setHome(parts[1]);
+                return request;
+            case RH:
+                if (parts.length != 3) return null;
+                request = new ClientRequest(Command.RH);
+                request.setHome(parts[1]);
+                request.setDevice(parts[2]);
+                return request;
+            case OUT:
+                return new ClientRequest(Command.OUT);
+            default:
+                return null;
+        }
+    }*/
+    }
+
 
     public void handleSimpleResponse(ServerResponse response, String successMsg){
         if(response.getStatus() == (ResponseStatus.OK)){
@@ -216,83 +369,75 @@ public class SpertaClient {
             return;
            }
         }
-/*
+        /*
         client.login(userID, pwd);
         
         printCommands();
         try (Scanner sc = new Scanner(System.in)) { 
+        if (args.length < 3) {
+            System.out.println("Uso: java -jar SpertaClient.jar <ip[:port]> <userID> <password>");
+            return;
+        }
+
+        String[] hostParts = args[0].split(":");
+        String ipAddr = hostParts[0];
+        int port = hostParts.length == 1 ? 22345 : Integer.parseInt(hostParts[1]);
+
+        String userID = args[1];
+        String pwd = args[2];
+
+        SpertaClient client = new SpertaClient(ipAddr, port);
+
+        try (Scanner sc = new Scanner(System.in)) {
+
+            if (!client.establishAttestation()) {
+                return;
+            }
+
+            boolean loggedIn = false;
+            while (!loggedIn) {
+                ResponseStatus loginStatus = client.login(userID, pwd);
+
+                if (loginStatus == ResponseStatus.WRONG_PWD) {
+                    System.out.println("WRONG-PWD");
+                    System.out.print("Password: ");
+                    pwd = sc.nextLine();
+                } else if (loginStatus == ResponseStatus.OK_NEW_USER) {
+                    System.out.println("OK-NEW-USER");
+                    loggedIn = true;
+                } else if (loginStatus == ResponseStatus.OK_USER) {
+                    System.out.println("OK-USER");
+                    loggedIn = true;
+                } else {
+                    System.out.println("Erro no login: " + loginStatus);
+                    return;
+                }
+            }
+
+            printCommands();
+
             while (true) {
                 System.out.print("> ");
-                String[] line = sc.nextLine().split(" ");
-                String command = line[0];
-                ClientRequest request; 
-                switch (command) {
-                    case "CREATE":
-                        if (line.length != 2) {
-                            System.out.println("Uso: CREATE <hm>");
-                            continue;
-                        }
-                        String home = line[1];
-                        request = new ClientRequest(Command.CREATE);
-                        request.setHome(home);
-                        break;
-                    case "ADD":
-                        if (line.length != 4) {
-                            System.out.println("Uso: ADD <user1> <hm> <s>");
-                            continue;
-                        }
-                        request = new ClientRequest(Command.ADD);
-                        request.setHome(line[2]); request.setUserIdToAdd(line[1]); request.setSection(line[3]);
-                        break;
-                    case "RD":
-                        if (line.length != 3) {
-                            System.out.println("Uso: RD <hm> <s>");
-                            continue;
-                        }
-                        request = new ClientRequest(Command.RD);
-                        request.setHome(line[1]); request.setSection(line[2]);
-                        break;
-                    case "EC":
-                        if (line.length != 4) {
-                            System.out.println("Uso: EC <hm> <d> <int>");
-                            continue;
-                        }
-                        request = new ClientRequest(Command.EC);
-                        request.setHome(line[1]); request.setData(line[2]); request.setIntValue(Integer.parseInt(line[3]));
-                        break;
-                    case "RT":
-                        if (line.length != 2) {
-                            System.out.println("Uso: RT <hm>");
-                            continue;
-                        }
-                        request = new ClientRequest(Command.RT);
-                        request.setHome(line[1]);
-                        break;
-                    case "RH":
-                        if (line.length != 3) {
-                            System.out.println("Uso: RH <hm> <d>");
-                            continue;
-                        }
-                        request = new ClientRequest(Command.RH);
-                        request.setHome(line[1]); request.setData(line[2]);
-                        break;
-                    case "OUT":
-                        // Enviar msg ao servidor a dizer que o cliente desconectou-se
-                        break;
-                    default:
-                        System.out.println("Comando inválido.");
-                        continue;
+                String input = sc.nextLine();
+
+                ClientRequest request = client.buildRequestFromInput(input);
+                if (request == null) {
+                    System.out.println("Comando inválido.");
+                    continue;
                 }
 
-                if (cmd == Command.OUT) {
+                client.sendRequest(request);
+
+                if (request.getCommand() == Command.OUT) {
                     break;
                 }
-                
-                client.sendRequest(request);
+
                 ServerResponse response = client.getResponse();
                 client.handleResponse(response);
             }
-            
+
+        } finally {
+            client.close();
         }
 
         client.close();

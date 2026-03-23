@@ -2,15 +2,15 @@ package common;
 
 public class ClientRequest extends Message{
 
-    // Login Attributes
+    //Login attributes
     private String username;
     private String password;
 
-    // Attestation Attributes
+    //Attestation attributes
     private String appName;
     private long appSize;
 
-    // General Request Attributes
+    // General command attributes
     private String home;
     private String userIdToAdd; 
    // private String userIdToRemove;
@@ -22,6 +22,7 @@ public class ClientRequest extends Message{
         super(command);
     }
 
+    // Login
     public String getUsername() {
         return username;
     }
@@ -56,7 +57,7 @@ public class ClientRequest extends Message{
         this.home = home;
     }
 
-    public String getUserIdToAdd() {
+    public String userIdToAdd() {
         return userIdToAdd;
     }
     public void setUserIdToAdd(String userIdToAdd) {
