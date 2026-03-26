@@ -5,24 +5,44 @@ import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
+/**
+ * Cliente de linha de comandos para interagir com o servidor SpertaServer.
+ */
 public class SpertaClient {
 
     private Socket socket;
     private ObjectOutputStream out;
     private ObjectInputStream in;
     
+    /**
+     * Cria uma ligacao ao servidor e inicializa os streams de comunicação.
+     *
+     * @param ipAddr endereco IP do servidor
+     * @param port porto do servidor
+     * @throws Exception se a ligacao ou os streams nao puderem ser criados
+     */
     public SpertaClient(String ipAddr, int port) throws Exception {
         this.socket = new Socket(ipAddr, port);
         this.out = new ObjectOutputStream(socket.getOutputStream());
         this.in = new ObjectInputStream(socket.getInputStream());
     }
     
+    /**
+     * Obtém o tamanho do binario do cliente para ser usado na atestação.
+     *
+     * @return tamanho do ficheiro compilado do cliente
+     */
     private static long getClientAppSize() {
         // vai buscar o tamanho do ficheiro compilado para a atestação
         File classFile = new File("bin/client/SpertaClient.class");
         return classFile.length();
     }
     
+    /**
+     * Envia para o servidor os dados necessários para a atestação do cliente.
+     *
+     * @throws Exception caso ocorra uma falha de comunicação ou a atestação falhe
+     */
     public void establishAtestation() throws Exception {
         //enviar dados da app para atestação
         String appName = "SpertaClient";
@@ -45,6 +65,14 @@ public class SpertaClient {
     }
 
     
+    /**
+     * Envia um pedido de login ao servidor.
+     *
+     * @param userID ID do utilizador
+     * @param password password do utilizador
+     * @return resposta do servidor ao pedido de login
+     * @throws Exception se ocorrer um erro de comunicação
+     */
     public ServerResponse login(String userID, String password) throws Exception {
         ClientRequest loginReq = new ClientRequest(Command.LOGIN);
         loginReq.setUsername(userID);
@@ -53,6 +81,9 @@ public class SpertaClient {
         return getResponse();
     }
 
+    /**
+     * Fecha os recursos de comunicação associados ao cliente.
+     */
     public void close() {
         try {
             in.close();
@@ -65,16 +96,32 @@ public class SpertaClient {
         } catch (Exception ignored) { }
     }
 
+    /**
+     * Envia um pedido ao servidor.
+     *
+     * @param request pedido a enviar
+     * @throws Exception se ocorrer um erro ao escrever no stream
+     */
     public void sendRequest(ClientRequest request) throws Exception {
         out.writeObject(request);
         out.flush();
     }
     
+    /**
+     * Lê uma resposta do servidor.
+     *
+     * @return resposta recebida
+     * @throws Exception se ocorrer um erro de leitura ou desserialização
+     */
     public ServerResponse getResponse() throws Exception {
         return (ServerResponse) in.readObject();
     }
     
-    //tratamento das respostas do servidor
+    /**
+     * Interpreta e apresenta ao utilizador a resposta recebida do servidor.
+     *
+     * @param response resposta a tratar
+     */
     public void handleResponse(ServerResponse response) {
         if (response == null) {
             System.out.println("Sem resposta do servidor.");
@@ -109,6 +156,12 @@ public class SpertaClient {
                 System.out.println("Resposta desconhecida do servidor.");
         }
     }
+
+    /**
+     * Recebe e apresenta o conteúdo de um ficheiro enviado pelo servidor.
+     *
+     * @param title título apresentado antes do conteudo
+     */
     private void receiveAndPrintFileContent(String title) {
         try {
             long fileSize = in.readLong();
@@ -122,6 +175,12 @@ public class SpertaClient {
         }
     }
 
+    /**
+     * Ponto de entrada do cliente de linha de comandos (main).
+     *
+     * @param args argumentos de arranque
+     * @throws Exception se ocorrer um erro nao tratado durante a execucao
+     */
     public static void main(String[] args) throws Exception {
         if (args.length != 3) {
             System.out.println("Uso: SpertaClient <ip:port> <userID> <password>");
@@ -156,12 +215,15 @@ public class SpertaClient {
            }
         }
         
-        System.out.println("Comandos disponíveis:\n CREATE <hm>\n ADD <user1> <hm> <s>\n RD <hm> <s>\n EC <hm> <d> <int>\n RT <hm>\n RH <hm> <d>\n OUT");
+        System.out.println("Comandos disponí­veis:\n CREATE <hm>\n ADD <user1> <hm> <s>\n RD <hm> <s>\n EC <hm> <d> <int>\n RT <hm>\n RH <hm> <d>\n OUT");
   
         while (true){
             System.out.print("> ");
             String input = sc.nextLine();
-            if (input.equalsIgnoreCase("OUT")) break;
+            if (input.equalsIgnoreCase("OUT")){
+              sc.close();
+              break;  
+            } 
 
             String[] line = input.split(" ");
             ClientRequest request = null;

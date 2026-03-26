@@ -3,9 +3,18 @@ package server;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+/**
+ * Ponto de entrada do servidor Sperta.
+ */
 public class SpertaServer {
 
 
+    /**
+     * Inicia o servidor, aceita ligações e cria handlers para cada cliente.
+     *
+     * @param args argumentos de arranque; opcionalmente contem o porto
+     * @throws Exception se ocorrer um erro ao iniciar o servidor
+     */
     public static void main(String[] args) throws Exception {
         int port;
         if(args.length == 0){

@@ -9,6 +9,9 @@ import java.util.Map;
 import java.time.*;
 import java.time.format.DateTimeFormatter;;
 
+/**
+ * Mantem o estado global do servidor, incluindo utilizadores, casas e dispositivos.
+ */
 public class ServerState {
 
     private final String HOUSES_FILE = "data/houses.txt";
@@ -18,15 +21,31 @@ public class ServerState {
     private Map<String, User> users = new HashMap<>();
     private Map<String, Casa> casas = new HashMap<>();
 
+    /**
+     * Cria uma nova instância do estado do servidor e carrega os dados persistidos.
+     */
     public ServerState(){
         loadHouses();
         loadUsers();
         loadAttestations();
     }
+
+    /**
+     * Adiciona um utilizador ao estado em memória.
+     *
+     * @param user utilizador a adicionar
+     */
     public synchronized void addUser(User user) {
         users.put(user.getUsername(), user);
     }
 
+    /**
+     * Valida as credenciais de um utilizador existente.
+     *
+     * @param username nome do utilizador
+     * @param password password fornecida
+     * @return {@code true} se as credenciais coincidirem; caso contrario, {@code false}
+     */
     public synchronized boolean authenticate(String username, String password) {
         if (!users.containsKey(username))
             return false;
@@ -34,7 +53,14 @@ public class ServerState {
         return users.get(username).getPassword().equals(password);
     }
     
-    //faz autenticação e regista o utilizador se for novo
+    //faz autenticaÃ§Ã£o e regista o utilizador se for novo
+    /**
+     * Efetua login ou regista automaticamente um novo utilizador.
+     *
+     * @param username nome do utilizador
+     * @param password password fornecida
+     * @return codigo textual com o resultado da operacao
+     */
     public synchronized String login(String username, String password) {
         if (!userExists(username)) {
             users.put(username, new User(username, password));
@@ -48,10 +74,23 @@ public class ServerState {
         return "WRONG-PWD";
     }
 
+    /**
+     * Verifica se um utilizador existe no estado atual.
+     *
+     * @param username nome do utilizador
+     * @return {@code true} se o utilizador existir; caso contrario, {@code false}
+     */
     public synchronized boolean userExists(String username) {
         return users.containsKey(username);
     }
 
+    /**
+     * Cria uma nova casa para um determinado dono.
+     *
+     * @param houseName nome da casa
+     * @param owner utilizador dono da casa
+     * @return {@code true} se a casa foi criada; caso contrario, {@code false}
+     */
     public synchronized boolean createCasa(String houseName, String owner) {
         if (casas.containsKey(houseName)) {
             return false;
@@ -61,18 +100,44 @@ public class ServerState {
         return true;
     }
 
+    /**
+     * Devolve a casa associada ao nome fornecido.
+     *
+     * @param houseName nome da casa
+     * @return instância da casa ou {@code null} se nao existir
+     */
     public synchronized Casa getCasa(String houseName) {
         return casas.get(houseName);
     } 
 
+    /**
+     * Adiciona uma casa ao estado em memória.
+     *
+     * @param casa casa a adicionar
+     */
     public synchronized void addCasa(Casa casa) {
         casas.put(casa.getName(), casa);
     }
 
+    /**
+     * Verifica se uma casa existe.
+     *
+     * @param name nome da casa
+     * @return {@code true} se a casa existir; caso contrario, {@code false}
+     */
     public synchronized boolean houseExists(String name){
         return casas.containsKey(name);
     }
     
+    /**
+     * Concede permissao de acesso a uma secao da casa a um utilizador.
+     *
+     * @param requester utilizador que faz o pedido
+     * @param targetUser utilizador que recebe a permissao
+     * @param houseName nome da casa
+     * @param section secao autorizada
+     * @return codigo textual com o resultado da operacao
+     */
     public synchronized String addPermission(String requester, String targetUser, String houseName, String section) {
         loadUsers();
         if (!casas.containsKey(houseName)) {
@@ -93,6 +158,13 @@ public class ServerState {
         return "OK";
     }
 
+    /**
+     * Obtém o ficheiro com o estado atual de uma casa, se o utilizador tiver acesso.
+     *
+     * @param user utilizador autenticado
+     * @param houseName nome da casa
+     * @return ficheiro de estado da casa ou {@code null} se o acesso for negado ou a casa nao existir
+     */
     public synchronized File getHouseFile(String user, String houseName){
         if (!casas.containsKey(houseName)) {
             return null;
@@ -104,6 +176,14 @@ public class ServerState {
          return new File ("data/" + houseName + "_state.txt");
     }
 
+    /**
+     * Obtém o ficheiro de log de um dispositivo, se o utilizador tiver permissao.
+     *
+     * @param user utilizador autenticado
+     * @param houseName nome da casa
+     * @param deviceId identificador do dispositivo
+     * @return ficheiro de log ou {@code null} se o acesso for negado ou a casa nao existir
+     */
     public synchronized File getDeviceLogFile(String user, String houseName, String deviceId){
         if(!casas.containsKey(houseName)) {
             return null;
@@ -116,6 +196,9 @@ public class ServerState {
         return new File ("data/" + houseName + "_" + deviceId + "_log.csv");
     }
 
+    /**
+     * Carrega as casas persistidas no armazenamento local.
+     */
     private synchronized void loadHouses() {
         File file = new File(HOUSES_FILE);
         if (!file.exists()) return;
@@ -143,6 +226,12 @@ public class ServerState {
         }
     }
 
+    /**
+     * Interpreta a representacao textual das permissoes e aplica-a a uma casa.
+     *
+     * @param casa casa a atualizar
+     * @param data dados serializados das permissoes
+     */
     private void parsePermissions(Casa casa, String data){
         //data format: user1:E,G|user2:L
         String[] userEntries = data.split("\\|");
@@ -158,6 +247,12 @@ public class ServerState {
         }
     }
 
+    /**
+     * Interpreta e carrega os contadores de secoes de uma casa.
+     *
+     * @param casa casa a atualizar
+     * @param data dados serializados dos contadores
+     */
     private void parseCounters(Casa casa, String data){
         // data format E:1,G:2,L:1,M:1,P:1,S:1
         String[] sections = data.split(",");
@@ -169,6 +264,9 @@ public class ServerState {
         }
     }
 
+    /**
+     * Carrega os utilizadores persistidos no armazenamento local.
+     */
     private void loadUsers(){
         File file = new File(USERS_FILE);
         if (!file.exists()) return;
@@ -183,7 +281,7 @@ public class ServerState {
                 if(parts.length >=2){
                 users.put(parts[0], new User(parts[0], parts[1]));
                 }else{
-                    System.out.println("Lina ignorada em users.txt, formato inválido: " + line);
+                    System.out.println("Lina ignorada em users.txt, formato invÃ¡lido: " + line);
                 }
             }
         } catch (IOException e) {
@@ -191,6 +289,14 @@ public class ServerState {
         }
     }
 
+    /**
+     * Regista um novo dispositivo numa casa e cria o respetivo ficheiro de log.
+     *
+     * @param requester utilizador que pede o registo
+     * @param houseName nome da casa
+     * @param section secao onde o dispositivo sera registado
+     * @return codigo textual com o resultado da operacao
+     */
     public synchronized String registerDevice(String requester, String houseName, String section){
         if (!casas.containsKey(houseName)) {
             return "NOHM";
@@ -219,6 +325,13 @@ public class ServerState {
         return "OK";
     }
 
+    /**
+     * Gera um resumo textual do estado atual de uma casa.
+     *
+     * @param user utilizador que pede a informacao
+     * @param houseName nome da casa
+     * @return resumo textual da casa ou codigo textual de erro
+     */
     public synchronized String getHouseSummary(String user, String houseName){
         if (!casas.containsKey(houseName)) return "NOHM";
 
@@ -242,6 +355,9 @@ public class ServerState {
         return sb.toString();   
     }
 
+    /**
+     * Persiste a lista de casas no armazenamento local.
+     */
     private synchronized void saveHouses(){
         try (PrintWriter pw = new PrintWriter(new FileWriter(HOUSES_FILE))){
             for (Casa c : casas.values()){
@@ -252,10 +368,16 @@ public class ServerState {
         }
     }
 
+    /**
+     * Carrega os dados de atestacao persistidos.
+     */
     private void loadAttestations(){
-        // Implementar se necessário para a fase 2
+        // Implementar se necessÃ¡rio para a fase 2
     }
 
+    /**
+     * Persiste os dados atuais das casas no armazenamento local.
+     */
     public synchronized void saveData(){
         try (PrintWriter pw = new PrintWriter(new FileWriter(HOUSES_FILE))){
             for (Casa c : casas.values()){
@@ -266,6 +388,15 @@ public class ServerState {
         }
     }
 
+    /**
+     * Executa um comando sobre um dispositivo, validando acessos e intervalo de valores.
+     *
+     * @param user utilizador autenticado
+     * @param houseName nome da casa
+     * @param deviceId identificador do dispositivo
+     * @param value valor a aplicar ao dispositivo
+     * @return codigo textual com o resultado da operacao
+     */
     public synchronized String executeCommand (String user, String houseName, String deviceId, int value){
         if (!casas.containsKey(houseName)) return "NOHM";
         
@@ -284,6 +415,13 @@ public class ServerState {
         return "OK";
     }
 
+    /**
+     * Regista no ficheiro de log o valor enviado para um dispositivo.
+     *
+     * @param houseName nome da casa
+     * @param deviceId identificador do dispositivo
+     * @param value valor registado
+     */
     private void writeToDeviceLog(String houseName, String deviceId, int value){
         String logFileName = "data/" + houseName + "_" + deviceId + "_log.csv";
         String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
@@ -295,6 +433,13 @@ public class ServerState {
         }
     }
 
+    /**
+     * Atualiza o ficheiro com o estado atual dos dispositivos de uma casa.
+     *
+     * @param houseName nome da casa
+     * @param deviceId identificador do dispositivo
+     * @param value novo valor do dispositivo
+     */
     private void updateHouseState(String houseName, String deviceId, int value){
         File stateFile = new File("data/" + houseName + "_state.txt");
         Map<String, String> deviceStates = new HashMap<>();

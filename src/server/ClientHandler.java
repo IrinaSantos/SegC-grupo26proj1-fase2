@@ -3,6 +3,9 @@ import common.*;
 import java.io.*;
 import java.net.Socket;
 
+/**
+ * Trata a comunicação com um cliente ligado ao servidor.
+ */
 public class ClientHandler extends Thread {
 
     private Socket socket;
@@ -15,6 +18,13 @@ public class ClientHandler extends Thread {
     private UserController userController;
     private AttestationController attestationController;
 
+    /**
+     * Cria um novo handler associado a um socket de cliente.
+     *
+     * @param socket socket do cliente
+     * @param state estado global do servidor
+     * @throws IOException se ocorrer um erro ao inicializar os streams
+     */
     public ClientHandler(Socket socket, ServerState state) throws IOException {
         this.socket = socket;
         this.state = state;
@@ -24,6 +34,9 @@ public class ClientHandler extends Thread {
         this.attestationController = new AttestationController();
     }
     
+    /**
+     * Fecha o socket associado ao cliente.
+     */
     public void close() {
         try {
             socket.close();
@@ -32,6 +45,11 @@ public class ClientHandler extends Thread {
         }
     }
 
+    /**
+     * Valida a atestação enviada pelo cliente antes da autenticação.
+     *
+     * @throws Exception se o pedido de atestação for invalido ou falhar
+     */
     public void verifyAttestation() throws Exception {
         ClientRequest attestationRequest = (ClientRequest) readRequest();
         ServerResponse attestationResponse;
@@ -54,6 +72,11 @@ public class ClientHandler extends Thread {
         }
     }
     
+    /**
+     * Processa o fluxo de autenticação e registo de utilizadores.
+     *
+     * @throws Exception se ocorrer um erro irrecuperável durante a autenticação
+     */
     public void authenticateUser() throws Exception {
         boolean isAuthenticated = false;
         while (!isAuthenticated) { 
@@ -101,6 +124,11 @@ public class ClientHandler extends Thread {
         }
     }
     
+    /**
+     * Lê um pedido enviado pelo cliente.
+     *
+     * @return pedido recebido ou {@code null} em caso de erro
+     */
     public ClientRequest readRequest() {
         try {
             return (ClientRequest) in.readObject();
@@ -110,6 +138,11 @@ public class ClientHandler extends Thread {
         }
     }
     
+    /**
+     * Envia uma resposta ao cliente.
+     *
+     * @param response resposta a enviar
+     */
     public void sendServerResponse(ServerResponse response) {
         try {
             out.writeObject(response);
@@ -119,6 +152,9 @@ public class ClientHandler extends Thread {
         }
     }
 
+    /**
+     * Executa o ciclo de vida da ligação com o cliente.
+     */
     public void run() {
         try{
         verifyAttestation();
@@ -142,24 +178,30 @@ public class ClientHandler extends Thread {
         }
     }
 
+    /**
+     * Processa um pedido funcional do cliente e devolve a resposta apropriada.
+     *
+     * @param request pedido recebido
+     * @return resposta a enviar ao cliente
+     */
     public ServerResponse processClientRequest(ClientRequest request) {
         ServerResponse response;
         try{
             switch (request.getCommand()) {
-                //Criar casa <hm> - utilizador é Owner 
+                //Criar casa <hm> - utilizador Ã© Owner 
                 case CREATE:
                     String houseName = request.getHome();
                     boolean created = state.createCasa(houseName, authenticatedUser);
                 
                     return new ServerResponse(Command.CREATE, created ? ResponseStatus.OK : ResponseStatus.NOK);
 
-                //Adicionar utilizador <user1> à casa <hm>, seção <s>
+                //Adicionar utilizador <user1> à  casa <hm>, secção <s>
                 case ADD:
                     
                 String resAdd = state.addPermission(authenticatedUser, request.getUserIdToAdd(), request.getHome(), request.getSection());
                 return new ServerResponse(Command.ADD, ResponseStatus.valueOf(resAdd));
 
-                //Registar um Dispositivo na casa <hm>, na seção <s>
+                //Registar um Dispositivo na casa <hm>, na secção <s>
                 case RD:
                     String resRd = state.registerDevice(authenticatedUser, request.getHome(), request.getSection());
                     return new ServerResponse(Command.RD, ResponseStatus.valueOf(resRd));
@@ -169,14 +211,14 @@ public class ClientHandler extends Thread {
                     String resEC = state.executeCommand(authenticatedUser, request.getHome(), request.getDeviceId(), request.getIntValue());
                     return new ServerResponse(Command.EC, ResponseStatus.valueOf(resEC));
 
-                //Receber a informação sobre o último comando  (estados/temporizações) enviado a cada dispositivo da 
-                // casa <hm>, desde que o utilizador tenha permissões
+                //Receber a informação sobre o último comando  (estados/temporizaÃ§Ãµes) enviado a cada dispositivo da 
+                // casa <hm>, desde que o utilizador tenha permissÃµes
                 
-                // Estão a ser tratados no RUN()
+                // EstÃ£o a ser tratados no RUN()
                 /*case RT:
-                //Receber o Histórico (ficheiro de log .csv) de comandos enviados ao dispositivo <d> da casa <hm>, 
-                // desde que o utilizador tenha permissões
-                // Estão a ser tratados no RUN()
+                //Receber o HistÃ³rico (ficheiro de log .csv) de comandos enviados ao dispositivo <d> da casa <hm>, 
+                // desde que o utilizador tenha permissÃµes
+                // EstÃ£o a ser tratados no RUN()
                 case RH:
                     return new ServerResponse(request.getCommand(), ResponseStatus.OK);
                 */
@@ -192,6 +234,12 @@ public class ClientHandler extends Thread {
         }
     }
 
+    /**
+     * Trata pedidos de transferência de ficheiros associados a casas ou dispositivos.
+     *
+     * @param request pedido recebido
+     * @throws IOException se ocorrer um erro durante a leitura ou envio do ficheiro
+     */
     private void handleFileRequest(ClientRequest request) throws IOException {
         File file;
         if (request.getCommand() == Command.RT) {

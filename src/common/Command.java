@@ -1,5 +1,8 @@
 package common;
 
+/**
+ * Enumera os comandos suportados pelo protocolo cliente-servidor.
+ */
 public enum Command {
 
     LOGIN,

@@ -1,5 +1,8 @@
 package common;
 
+/**
+ * Enumera os estados possiveis nas respostas do servidor.
+ */
 public enum ResponseStatus {
     OK,
     NOK,
