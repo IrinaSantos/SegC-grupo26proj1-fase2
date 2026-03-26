@@ -45,20 +45,6 @@ public class ClientHandler extends Thread {
         String appName = attestationRequest.getAppName();
         long appSize = attestationRequest.getAppSize();
 
-        /*if (attestationController.isAttestationRegistered(appName)) {
-            if (!attestationController.verifyAttestation(appName, appSize)) {
-                attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.ATTESTATION_FAILED);
-                sendServerResponse(attestationResponse);
-                close(); return;
-            } else attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.ATTESTATION_OK);
-        } else {
-            if (!attestationController.registerAttestation(appName, appSize)) {
-                attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.ATTESTATION_SERVER_ERROR);
-                sendServerResponse(attestationResponse);
-                close(); return;
-            } else attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.ATTESTATION_OK);
-        }
-        sendServerResponse(attestationResponse); */
         if(attestationController.verifyAttestation(appName, appSize)){
             attestationResponse = new ServerResponse(Command.ATTESTATION, ResponseStatus.ATTESTATION_OK);
             sendServerResponse(attestationResponse);
@@ -164,29 +150,12 @@ public class ClientHandler extends Thread {
                 case CREATE:
                     String houseName = request.getHome();
                     boolean created = state.createCasa(houseName, authenticatedUser);
-                    
-                    if (created) {
-                        response = new ServerResponse(request.getCommand(), ResponseStatus.OK);
-                    } else {
-                        response = new ServerResponse(request.getCommand(), ResponseStatus.NOK);
-                    }
+                
                     return new ServerResponse(Command.CREATE, created ? ResponseStatus.OK : ResponseStatus.NOK);
 
                 //Adicionar utilizador <user1> à casa <hm>, seção <s>
                 case ADD:
-                /*  
-                    String targetUser = request.getTargetUser();
-                    String houseName = request.getHome();
-                    String section = request.getSection();
-
-                    String permissionResponse = state.addPermission(targetUser, targetUser, houseName, section);
-                    if (permissionResponse.equals("OK")) {
-                        response = new ServerResponse(request.getCommand(), ResponseStatus.OK);
-                    } else {
-                        response = new ServerResponse(request.getCommand(), ResponseStatus.NOK);
-                    }
-                    break;
-                        */
+                    
                 String resAdd = state.addPermission(authenticatedUser, request.getUserIdToAdd(), request.getHome(), request.getSection());
                 return new ServerResponse(Command.ADD, ResponseStatus.valueOf(resAdd));
 
@@ -202,12 +171,15 @@ public class ClientHandler extends Thread {
 
                 //Receber a informação sobre o último comando  (estados/temporizações) enviado a cada dispositivo da 
                 // casa <hm>, desde que o utilizador tenha permissões
-                case RT:
+                
+                // Estão a ser tratados no RUN()
+                /*case RT:
                 //Receber o Histórico (ficheiro de log .csv) de comandos enviados ao dispositivo <d> da casa <hm>, 
                 // desde que o utilizador tenha permissões
+                // Estão a ser tratados no RUN()
                 case RH:
                     return new ServerResponse(request.getCommand(), ResponseStatus.OK);
-
+                */
                 //CTRL+C
                 case OUT:
                     response = null;

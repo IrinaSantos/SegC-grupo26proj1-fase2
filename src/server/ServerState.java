@@ -113,7 +113,7 @@ public class ServerState {
         if(!casa.getOwner().equals(user) && !casa.hasPermissionForDevice(user, deviceId)){
             return null;
         }
-        return new File ("data/" + houseName + "_" + deviceId + "_log.txt");
+        return new File ("data/" + houseName + "_" + deviceId + "_log.csv");
     }
 
     private synchronized void loadHouses() {
@@ -203,6 +203,7 @@ public class ServerState {
         }
 
         String deviceId = casa.incrementSectionCounter(section);
+        casa.updateDeviceState(deviceId, 0);
         
         try{
             File logFile = new File("data/" + houseName + "_" + deviceId + "_log.csv");
@@ -216,6 +217,29 @@ public class ServerState {
         saveHouses();
         System.out.println("Device " + deviceId + " registered in house " + houseName);
         return "OK";
+    }
+
+    public synchronized String getHouseSummary(String user, String houseName){
+        if (!casas.containsKey(houseName)) return "NOHM";
+
+        Casa casa = casas.get(houseName);
+
+        if (!casa.getOwner().equals(user) && !casa.hasPermission(user)){
+            return "NOPERM";
+        }
+
+        Map<String, Integer> states = casa.getDeviceStates();
+        if(states.isEmpty()){
+            return "No devices registered in this house.";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("House: ").append(casa.getName()).append("\n");
+        sb.append("Owner: ").append(casa.getOwner()).append("\n");
+        sb.append("Devices:\n");
+        for (String deviceId : casa.getDeviceStates().keySet()){
+            sb.append(" - ").append(deviceId).append(": ").append(casa.getDeviceStates().get(deviceId)).append("\n");
+        }
+        return sb.toString();   
     }
 
     private synchronized void saveHouses(){
@@ -243,25 +267,25 @@ public class ServerState {
     }
 
     public synchronized String executeCommand (String user, String houseName, String deviceId, int value){
-        if (!casas.containsKey(houseName)) {
-            return "NOHM";
-        }
-
+        if (!casas.containsKey(houseName)) return "NOHM";
+        
         Casa casa = casas.get(houseName);
+    
+        if (!casa.hasDevice(deviceId)) return "NOD";
 
-        if (!casa.hasPermissionForDevice(user, deviceId)) {
-            return "NOPERM";
-        }
-        if (value < 0 || value > 600) {
-            return "NOK";
-        }
+        if (!casa.hasPermissionForDevice(user, deviceId)) return "NOPERM";
+        
+        if (value < 0 || value > 600) return "NOK";
+        
         writeToDeviceLog(houseName, deviceId, value);
         updateHouseState(houseName, deviceId, value);
+
+        casa.updateDeviceState(deviceId, value);
         return "OK";
     }
 
     private void writeToDeviceLog(String houseName, String deviceId, int value){
-        String logFileName = "data/" + houseName + "_" + deviceId + "_log.txt";
+        String logFileName = "data/" + houseName + "_" + deviceId + "_log.csv";
         String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
         try (PrintWriter pw = new PrintWriter(new FileWriter(logFileName, true))){

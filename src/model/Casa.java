@@ -13,17 +13,22 @@ public class Casa implements Serializable {
     private List<Device> devices = new ArrayList<>();
     private Map<String, List<String>> permissions = new HashMap<>();
     private Map<String, Integer> sectionCounters = new HashMap<>();
+    private Map<String, Integer> deviceStates = new HashMap<>();
+
 
     public Casa(String name, String owner) {
         this.name = name;
-        this.owner = owner;
-        //iniciar os contadores a 1
-        sectionCounters.put("E", 1); 
-        sectionCounters.put("G", 1);
-        sectionCounters.put("L", 1); 
-        sectionCounters.put("M", 1);
-        sectionCounters.put("P", 1); 
-        sectionCounters.put("S", 1);
+    }
+    public void updateDeviceState(String deviceId, int value) {
+        deviceStates.put(deviceId, value);
+    }
+
+    public boolean hasDevice(String deviceId) {
+        return deviceStates.containsKey(deviceId);
+    }
+
+    public Map<String, Integer> getDeviceStates(){
+        return deviceStates;
     }
 
     public void addDevice(Device device) {
@@ -77,6 +82,7 @@ public class Casa implements Serializable {
         int nextCounter = currentCounter + 1;
         String deviceId = section + nextCounter;
         sectionCounters.put(section, nextCounter);
+        deviceStates.put(deviceId, 0); // Inicializa o estado do novo dispositivo a 0
         return deviceId;
     }
 
