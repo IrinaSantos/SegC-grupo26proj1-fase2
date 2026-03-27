@@ -28,7 +28,7 @@ Compilar:
 Em PowerShell:
 
 ```powershell
-Preencham sff
+javac -d bin src\common\*.java src\model\*.java src\server\*.java src\client\*.java
 ```
 
 
