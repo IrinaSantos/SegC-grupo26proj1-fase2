@@ -1,5 +1,5 @@
 ## Seguranca e Confiabilidade 2025/2026
-# SegC-grupo26proj1-fase1
+# SegC-grupo26proj1-fase2
 ## Grupo SEGC-026
  - Irina Santos fc59786
  - Gonçalo Costa fc61803
